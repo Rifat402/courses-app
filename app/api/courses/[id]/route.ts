@@ -5,10 +5,10 @@ import { Course } from "@/types/course";
 // GET: Retrieve a course by ID
 export async function GET(
   request: Request,
-  context: { params: Promise<{ id: string }> } // Await params
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params; // Await params before accessing
+    const { id } = await context.params;
     const courseId = parseInt(id, 10);
 
     if (isNaN(courseId)) {
