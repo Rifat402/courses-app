@@ -37,50 +37,6 @@ export async function GET(
   }
 }
 
-// // PUT: Update a course by ID
-// export async function PUT(
-//   request: Request,
-//   context: { params: Promise<{ id: string }> } // Await params
-// ) {
-//   try {
-//     const { id } = await context.params; // Await params before accessing
-//     const courseId = parseInt(id, 10);
-//     if (isNaN(courseId)) {
-//       return NextResponse.json(
-//         { error: "Invalid course ID." },
-//         { status: 400 }
-//       );
-//     }
-    
-//     const updatedCourse: Partial<Course> = await request.json();
-//     const client = await clientPromise;
-//     const db = client.db("coursesDB");
-    
-//     if ("_id" in updatedCourse) {
-//       delete updatedCourse._id;
-//     }
-
-//     const result = await db.collection("courses").findOneAndUpdate(
-//       { id: courseId },
-//       { $set: updatedCourse },
-//       { returnDocument: "after" }
-//     );
-
-//     if (!result){
-//       console.error("No document found for id:", courseId, "Result:", JSON.stringify(result));
-//       throw new Error("Update Failed" + result);
-//     }
-
-//       return NextResponse.json(result.value, { status: 200 });
-//     } catch (error) {
-//       console.error("Error updating course:", error);
-//       return NextResponse.json(
-//         { error: "Failed to update course." },
-//         { status: 500 }
-//       );
-//     }
-//   }
-
   export async function PUT(
     request: Request,
     context: { params: Promise<{ id: string }> }
@@ -109,7 +65,6 @@ export async function GET(
         { returnDocument: "after" }
       );
   
-      // Use result.value if available, otherwise result
       const updatedDocument = result?.value ?? result;
   
       if (!updatedDocument) {
