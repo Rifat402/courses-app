@@ -1,30 +1,6 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import clientPromise from "@/lib/mongodb"
 import { Course } from "@/types/course";
-
-// Define the path to the JSON file
-const dataFilePath = path.join(process.cwd(), "data", "courses.json");
-
-// Helper function to read courses
-const readCourses = (): Course[] => {
-  try {
-    const jsonData = fs.readFileSync(dataFilePath, "utf-8");
-    return JSON.parse(jsonData) as Course[];
-  } catch (error) {
-    console.error("Error reading courses file:", error);
-    return [];
-  }
-};
-
-// Helper function to write courses
-const writeCourses = (courses: Course[]) => {
-  try {
-    fs.writeFileSync(dataFilePath, JSON.stringify(courses, null, 2), "utf-8");
-  } catch (error) {
-    console.error("Error writing to courses file:", error);
-  }
-};
 
 // GET: Retrieve a course by ID
 export async function GET(
@@ -42,7 +18,9 @@ export async function GET(
       );
     }
 
-    const courses = readCourses();
+    const client = await clientPromise;
+    const db = client.db("coursesDB");
+    const courses = await db.collection("courses").find({}).toArray();
     const course = courses.find((c) => c.id === courseId);
 
     if (!course) {
@@ -59,43 +37,95 @@ export async function GET(
   }
 }
 
-// PUT: Update a course by ID
-export async function PUT(
-  request: Request,
-  context: { params: Promise<{ id: string }> } // Await params
-) {
-  try {
-    const { id } = await context.params; // Await params before accessing
-    const courseId = parseInt(id, 10);
-    if (isNaN(courseId)) {
+// // PUT: Update a course by ID
+// export async function PUT(
+//   request: Request,
+//   context: { params: Promise<{ id: string }> } // Await params
+// ) {
+//   try {
+//     const { id } = await context.params; // Await params before accessing
+//     const courseId = parseInt(id, 10);
+//     if (isNaN(courseId)) {
+//       return NextResponse.json(
+//         { error: "Invalid course ID." },
+//         { status: 400 }
+//       );
+//     }
+    
+//     const updatedCourse: Partial<Course> = await request.json();
+//     const client = await clientPromise;
+//     const db = client.db("coursesDB");
+    
+//     if ("_id" in updatedCourse) {
+//       delete updatedCourse._id;
+//     }
+
+//     const result = await db.collection("courses").findOneAndUpdate(
+//       { id: courseId },
+//       { $set: updatedCourse },
+//       { returnDocument: "after" }
+//     );
+
+//     if (!result){
+//       console.error("No document found for id:", courseId, "Result:", JSON.stringify(result));
+//       throw new Error("Update Failed" + result);
+//     }
+
+//       return NextResponse.json(result.value, { status: 200 });
+//     } catch (error) {
+//       console.error("Error updating course:", error);
+//       return NextResponse.json(
+//         { error: "Failed to update course." },
+//         { status: 500 }
+//       );
+//     }
+//   }
+
+  export async function PUT(
+    request: Request,
+    context: { params: Promise<{ id: string }> }
+  ) {
+    try {
+      const { id } = await context.params;
+      const courseId = parseInt(id, 10);
+      if (isNaN(courseId)) {
+        return NextResponse.json(
+          { error: "Invalid course ID." },
+          { status: 400 }
+        );
+      }
+      
+      const updatedCourse: Partial<Course> = await request.json();
+      const client = await clientPromise;
+      const db = client.db("coursesDB");
+      
+      if ("_id" in updatedCourse) {
+        delete updatedCourse._id;
+      }
+  
+      const result = await db.collection("courses").findOneAndUpdate(
+        { id: courseId },
+        { $set: updatedCourse },
+        { returnDocument: "after" }
+      );
+  
+      // Use result.value if available, otherwise result
+      const updatedDocument = result?.value ?? result;
+  
+      if (!updatedDocument) {
+        console.error("No document found for id:", courseId, "Result:", JSON.stringify(result));
+        return NextResponse.json({ error: "Course not found." }, { status: 404 });
+      }
+  
+      return NextResponse.json(updatedDocument, { status: 200 });
+    } catch (error) {
+      console.error("Error updating course:", error);
       return NextResponse.json(
-        { error: "Invalid course ID." },
-        { status: 400 }
+        { error: "Failed to update course." },
+        { status: 500 }
       );
     }
-
-    const updatedCourse: Partial<Course> = await request.json();
-    const courses = readCourses();
-    const index = courses.findIndex((c) => c.id === courseId);
-
-    if (index === -1) {
-      return NextResponse.json({ error: "Course not found." }, { status: 404 });
-    }
-
-    courses[index] = { ...courses[index], ...updatedCourse, id: courseId };
-
-    writeCourses(courses);
-
-    return NextResponse.json(courses[index], { status: 200 });
-  } catch (error) {
-    console.error("Error updating course:", error);
-    return NextResponse.json(
-      { error: "Failed to update course." },
-      { status: 500 }
-    );
   }
-}
-
 // DELETE: Remove a course by ID
 export async function DELETE(
   request: Request,
@@ -111,15 +141,13 @@ export async function DELETE(
       );
     }
 
-    let courses = readCourses();
-    const initialLength = courses.length;
-    courses = courses.filter((c) => c.id !== courseId);
+    const client = await clientPromise;
+    const db = client.db("coursesDB");
+    const result = db.collection("courses").findOneAndDelete({id: courseId});
 
-    if (courses.length === initialLength) {
-      return NextResponse.json({ error: "Course not found." }, { status: 404 });
+    if (!result){
+      throw new Error("Delete failed");
     }
-
-    writeCourses(courses);
 
     return NextResponse.json(
       { message: `Course with ID ${courseId} deleted.` },

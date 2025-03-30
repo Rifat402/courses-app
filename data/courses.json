@@ -10,5 +10,11 @@
     "description": "AWS Cloud Development",
     "estimatedTime": "30 hours",
     "id": 10
+  },
+  {
+    "title": "IT 341",
+    "description": "Data Communications",
+    "estimatedTime": "40 hours",
+    "id": 11
   }
 ]
